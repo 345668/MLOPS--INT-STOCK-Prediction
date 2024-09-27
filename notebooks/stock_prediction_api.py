@@ -8,6 +8,7 @@ from keras.models import load_model
 import joblib
 import yfinance as yf
 from datetime import datetime
+import json
 
 app = Flask(__name__)
 
@@ -26,6 +27,12 @@ def download_dataset(label, start_date):
     file_path = os.path.join(folder_path, file_name)
     stock_data.to_csv(file_path)
     return stock_data
+
+# Load evaluation metrics from the JSON file
+def load_evaluation_metrics():
+    with open('lstm_model_metrics.json', 'r') as file:
+        metrics = json.load(file)
+    return metrics
 
 # Endpoint to check API status
 @app.route('/status', methods=['GET'])
@@ -71,9 +78,11 @@ def predict():
 
     return jsonify({"prediction": predicted_values.tolist()}), 200
 
+# Endpoint to get the model evaluation metrics
+@app.route('/evaluation', methods=['GET'])
+def evaluation():
+    metrics = load_evaluation_metrics()
+    return jsonify(metrics), 200
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
-
-
-
-
