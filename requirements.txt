@@ -1,3 +1,4 @@
+yfinance
 absl-py==2.1.0
 astunparse==1.6.3
 blinker==1.8.2
@@ -31,7 +32,7 @@ Pygments==2.18.0
 requests==2.32.3
 rich==13.8.1
 scikit-learn==1.5.2
-scipy==1.14.1
+scipy>=1.10.0
 setuptools==75.1.0
 six==1.16.0
 tensorboard==2.17.1
