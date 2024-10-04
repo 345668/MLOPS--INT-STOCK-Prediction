@@ -141,6 +141,16 @@ Copy code
 
 ## How to Run
 
+Use virtual environment:
+
+bash
+```
+python3 -m venv venv
+```
+```
+source venv/bin/activate
+```
+
 Clone the repository to your local machine:
 
 bash
@@ -166,5 +176,5 @@ bash
 ```
 uvicorn stock_prediction_api:api --reload
 ```
-Access the API at http://127.0.0.1:8000. (you can use /docs or /redoc) 
+Access the API at http://127.0.0.1:8000 (you can use /docs or /redoc).
 
