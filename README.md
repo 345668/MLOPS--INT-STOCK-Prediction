@@ -43,6 +43,7 @@ Copy code
 {
   "message": "Stock prediction API is running"
 }
+
 2. /evaluate
 Method: GET
 
@@ -77,7 +78,7 @@ Copy code
 4. /predict
 Method: POST
 
-Description: Predicts the stock price based on input features (open, high, low, close, volume).
+Description: Predicts the stock price based on input features (open, high, low, close, adjusted_close, volume).
 
 Input (JSON):
 
