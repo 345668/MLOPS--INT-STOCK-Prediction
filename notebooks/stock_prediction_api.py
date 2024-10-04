@@ -1,88 +1,102 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-import os
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+import pandas as pd
 import numpy as np
-from flask import Flask, request, jsonify
-from keras.models import load_model
-import joblib
+import tensorflow as tf
 import yfinance as yf
-from datetime import datetime
+import joblib
 import json
 
-app = Flask(__name__)
+# Load the model and scaler
+model = tf.keras.models.load_model("/Users/aleksandra.rancic/Desktop/MLOps_Project/MLOps/ML_Model_API/venv/lstm_model.h5")
 
-# Define folder path to store datasets
-folder_path = "/Users/aleksandra.rancic/Desktop/MLOps/dataset"
+model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mae', 'mse', 'accuracy'])
 
-# Load the trained LSTM model and the MinMaxScaler
-model = load_model('lstm_model.h5')
-scaler = joblib.load('minmax_scaler.pkl')
+scaler = joblib.load('/Users/aleksandra.rancic/Desktop/MLOps_Project/MLOps/ML_Model_API/venv/minmax_scaler.pkl')
 
-# Function to download the dataset
-def download_dataset(label, start_date):
-    end_date = datetime.now().strftime('%Y-%m-%d')
-    stock_data = yf.download(label, start=start_date, end=end_date)
-    file_name = f"{label}_stock_data.csv"
-    file_path = os.path.join(folder_path, file_name)
-    stock_data.to_csv(file_path)
-    return stock_data
+with open('/Users/aleksandra.rancic/Desktop/MLOps_Project/MLOps/ML_Model_API/venv/lstm_model_metrics.json', 'r') as f:
+    metrics = json.load(f)
 
-# Load evaluation metrics from the JSON file
-def load_evaluation_metrics():
-    with open('lstm_model_metrics.json', 'r') as file:
-        metrics = json.load(file)
-    return metrics
+api = FastAPI()
 
-# Endpoint to check API status
-@app.route('/status', methods=['GET'])
-def status():
-    return jsonify({"status": "API is running"}), 200
+class StockData(BaseModel):
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: float
 
-# Endpoint to download stock data and preprocess
-@app.route('/download', methods=['POST'])
-def download_stock_data():
-    data = request.get_json(force=True)
-    label = data.get('label', 'AAPL')
-    start_date = data.get('start_date', '2014-09-12')
+def log_model_performance(evaluation, filename="model_performance_log.json"):
+    try:
+        with open(filename, 'r') as f:
+            logs = json.load(f)
+    except FileNotFoundError:
+        logs = []
+
+    logs.append({
+        "test_loss": evaluation[0],
+        "test_mae": evaluation[1],
+        "test_mse": evaluation[2],
+        "timestamp": str(datetime.now())
+    })
+
+    with open(filename, 'w') as f:
+        json.dump(logs, f, indent=4)
+
+@api.get("/evaluate")
+def evaluate_model():
+    # Load the test data (you need to replace this with actual test data)
+    X_test = np.load('X_test.npy')  # Placeholder, replace with real data
+    y_test = np.load('y_test.npy')  # Placeholder, replace with real data
+
+    # Evaluate the model
+    evaluation = model.evaluate(X_test, y_test, verbose=0)
     
-    # Download stock data
-    stock_data = download_dataset(label, start_date)
+    # Return the evaluation results as JSON
+    return {
+        "Test Loss": evaluation[0],
+        "Test MAE": evaluation[1],
+        "Test MSE": evaluation[2]
+    }
+
+@api.get("/")
+def root():
+    return {"message": "Stock prediction API is running"}
+
+@api.get("/download_stock_data")
+def download_stock_data(ticker: str):
+    try: 
+        data = yf.download(ticker, period="10y")
+        data.to_csv(f'{ticker}_data.csv')
+        return {"message": f"Data for {ticker} downloaded successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@api.post("/predict")
+def predict(stock_data: StockData):
+    try: 
+        data = np.array([[stock_data.open, stock_data.high, stock_data.low, stock_data.close, stock_data.volume]])
+        scaled_data = scaler.transform(data)
+        lstm_input = scaled_data.reshape((1, 1, scaled_data.shape[1]))
+        prediction = model.predict(lstm_input)
+        
+        return {"prediction": prediction.tolist()}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@api.get("/metrics")
+def get_metrics():
+    try:
+        return metrics  # Returning the metrics loaded from the JSON file
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@api.post("/preprocess")
+def preprocess(stock_data: StockData):
+    try:
+        data = np.array([[stock_data.open, stock_data.high, stock_data.low, stock_data.close, stock_data.volume]])
+        scaled_data = scaler.transform(data)
     
-    return jsonify({"message": f"Stock data for {label} downloaded successfully!"}), 200
-
-# Endpoint to predict stock prices
-@app.route('/predict', methods=['POST'])
-def predict():
-    data = request.get_json(force=True)
-    
-    # Get the input features from the request
-    input_data = np.array(data['features']).reshape(-1, 1)
-
-    # Scale the input data using the loaded scaler
-    scaled_input = scaler.transform(input_data)
-
-    # Prepare the input data for LSTM
-    sequence_length = 60
-    x_input = []
-    for i in range(len(scaled_input) - sequence_length):
-        x_input.append(scaled_input[i:i + sequence_length])
-
-    x_input = np.array(x_input)
-
-    # Make predictions using the LSTM model
-    predictions = model.predict(x_input)
-
-    # Inverse transform the predictions to get the actual stock prices
-    predicted_values = scaler.inverse_transform(predictions)
-
-    return jsonify({"prediction": predicted_values.tolist()}), 200
-
-# Endpoint to get the model evaluation metrics
-@app.route('/evaluation', methods=['GET'])
-def evaluation():
-    metrics = load_evaluation_metrics()
-    return jsonify(metrics), 200
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+        return {"scaled_data": scaled_data.tolist()}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
