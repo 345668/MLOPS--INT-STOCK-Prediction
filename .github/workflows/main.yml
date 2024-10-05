@@ -1,0 +1,44 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+
+    - name: Run tests
+      run: |
+        pytest  # Ensure you have tests to validate the functionality
+
+    - name: Build Docker image
+      run: |
+        docker build -t stock_prediction_api .
+
+    - name: Login to Docker registry
+      run: |
+        echo "${{ secrets.DOCKER_PASSWORD }}" | docker login registry_url -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+    - name: Tag and Push Docker image
+      run: |
+        docker tag stock_prediction_api:latest registry_url/stock_prediction_api:latest
+        docker push registry_url/stock_prediction_api:latest
+
+    - name: Deploy to production
+      run: |
+        ssh user@server 'docker-compose -f /path/to/your/docker-compose.yml pull && docker-compose -f /path/to/your/docker-compose.yml up -d'
