@@ -89,6 +89,7 @@ Copy code
   "high": ,
   "low": ,
   "close": ,
+  "adjusted_close": ,
   "volume": 
 }
 Response:
@@ -96,7 +97,7 @@ Response:
 json
 Copy code
 {
-  "prediction": [[151.25]]
+  "prediction": [[]]
 }
 
 5. /metrics
@@ -130,6 +131,7 @@ Copy code
   "high": ,
   "low": ,
   "close": ,
+  "adjusted_close": ,
   "volume": 
 }
 Response:
@@ -137,7 +139,7 @@ Response:
 json
 Copy code
 {
-  "scaled_data": [[0.456, 0.478, 0.431, 0.462, 0.563]]
+  "scaled_data": [[, , , , ]]
 }
 
 ## How to Run
