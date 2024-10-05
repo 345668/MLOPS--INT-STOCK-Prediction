@@ -29,7 +29,7 @@ jobs:
 
       - name: Push Docker image to registry
         run: |
-          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+          echo "Stock@Investigations2024.MLOps" | docker login -u "aleksandrarancic" --password-stdin
           docker push aleksandrarancic/stock_prediction_api:latest
 
       - name: Deploy to production
