@@ -11,6 +11,21 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    services:
+      db:
+        image: postgres:13
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: stocks_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U user" 
+          --health-interval 10s 
+          --health-timeout 5s 
+          --health-retries 5
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -23,12 +38,13 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run tests
-        run: pytest
-
       - name: Build Docker image
         run: |
           docker build -t aleksandrarancic/stock_prediction_api:${{ github.sha }} .
+
+      - name: Run tests
+        run: |
+          docker-compose -f docker-compose_test.yml up --build --abort-on-container-exit
 
       - name: Push Docker image to registry
         run: |
@@ -39,4 +55,3 @@ jobs:
       - name: Deploy to production
         run: |
           ssh deploy@192.168.216.174 'docker pull aleksandrarancic/stock_prediction_api:latest && docker-compose up -d'
-
