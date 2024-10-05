@@ -34,5 +34,4 @@ jobs:
 
       - name: Deploy to production
         run: |
-          ssh user@server 'docker pull aleksandrarancic/stock_prediction_api:latest && docker-compose up -d'
-
+          ssh deploy@192.168.216.174 'docker pull aleksandrarancic/stock_prediction_api:latest && docker-compose up -d'
