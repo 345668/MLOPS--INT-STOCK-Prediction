@@ -2,7 +2,7 @@
 
 ## Overview
 
-This API is built using **FastAPI** and a pre-trained **LSTM model** to predict future stock prices based on stock data features. The model predicts stock prices using features such as Open, High, Low, Close, and Volume. The API also provides functionalities for downloading stock data, preprocessing input data, evaluating model performance, and returning model metrics.
+This API is built using **FastAPI** and a pre-trained **LSTM model** to predict future stock prices based on stock data features. The model predicts stock prices using features such as Open, High, Low, Close, Adjusted Close and Volume. The API also provides functionalities for downloading stock data, preprocessing input data, evaluating model performance, and returning model metrics.
 
 ## Requirements
 
