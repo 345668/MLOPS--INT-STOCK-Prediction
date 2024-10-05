@@ -11,34 +11,28 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3  # Updated to v3
 
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4  # Updated to v4
       with:
         python-version: '3.9'
 
     - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
+      run: pip install -r requirements.txt
 
     - name: Run tests
-      run: |
-        pytest  # Ensure you have tests to validate the functionality
+      run: pytest
 
     - name: Build Docker image
-      run: |
-        docker build -t stock_prediction_api .
+      run: docker build -t stock_prediction_api .
 
-    - name: Login to Docker registry
-      run: |
-        echo "${{ secrets.DOCKER_PASSWORD }}" | docker login registry_url -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
-
-    - name: Tag and Push Docker image
+    - name: Push Docker image to registry
       run: |
         docker tag stock_prediction_api:latest registry_url/stock_prediction_api:latest
+        echo "${{ secrets.DOCKER_PASSWORD }}" | docker login registry_url -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
         docker push registry_url/stock_prediction_api:latest
 
     - name: Deploy to production
       run: |
-        ssh user@server 'docker-compose -f /path/to/your/docker-compose.yml pull && docker-compose -f /path/to/your/docker-compose.yml up -d'
+        ssh user@server 'docker pull registry_url/stock_prediction_api:latest && docker-compose up -d'
