@@ -1,49 +1,70 @@
 name: CI/CD for FastAPI Application
 
 on:
-  push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
-
-permissions:
-  contents: read
+  push:  # This will run on any branch push
+  pull_request:  # This will run on pull requests to any branch
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: stocks_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
-    - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v3
-      with:
-        python-version: "3.11"
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt  # Installed directly from the root directory
+      - name: Cache pip
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
-    - name: Lint with flake8
-      run: |
-        pip install flake8
-        flake8 .
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-    - name: Run tests
-      run: |
-        pip install pytest pytest-mock  # Install pytest and mock for testing
-        pytest test_api.py  # Run tests located in the root directory
+      - name: Verify model file exists
+        run: ls -l models/lstm_model.h5  # Ensures the file is in the correct place
 
-    - name: Build Docker image
-      run: |
-        docker build -t aleksandrarancic/myapi:latest .  # Adjust with your username
+      - name: Run tests
+        run: |
+          until pg_isready -h localhost -U user; do
+            echo "Waiting for PostgreSQL to be ready..."
+            sleep 2
+          done
+          pytest ./notebooks/test_api.py  # Adjust to your test path
 
-    - name: Login to Docker Hub
-      run: |
-        echo "Stock@Investigations2024.MLOps" | docker login -u "aleksandrarancic" --password-stdin
+      - name: Build Docker image
+        run: |
+          docker build -t aleksandrarancic/myapi:latest .  # Adjust with your username
 
-    - name: Push Docker image
-      run: |
-        docker push aleksandrarancic/myapi:latest  # Push to your Docker Hub repository
+      - name: Login to Docker Hub
+        run: |
+          echo "Stock@Investigations2024.MLOps" | docker login -u "aleksandrarancic" --password-stdin
+
+      - name: Push Docker image
+        run: |
+          docker push aleksandrarancic/myapi:latest  # Push to your Docker Hub repository
+
