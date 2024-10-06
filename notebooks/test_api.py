@@ -2,18 +2,14 @@ import pytest
 from fastapi.testclient import TestClient
 from stock_prediction_api import api  
 import numpy as np
+import yfinance as yf
 
 client = TestClient(api)
 
-# Sample stock data for testing
-sample_stock_data = {
-    "open": 150.0,
-    "high": 155.0,
-    "low": 148.0,
-    "close": 152.0,
-    "adjusted_close": 152.0,
-    "volume": 1000000
-}
+# Function to download stock data from yfinance
+def download_stock_data(ticker: str, start_date: str, end_date: str):
+    stock_data = yf.download(ticker, start=start_date, end=end_date)
+    return stock_data.reset_index().to_dict(orient='records')  # Convert to a suitable format for the API
 
 def test_root():
     response = client.get("/")
@@ -26,7 +22,10 @@ def test_download_stock_data():
     assert "Data for AAPL downloaded successfully" in response.json().values()
 
 def test_preprocess():
-    response = client.post("/preprocess", json=sample_stock_data)
+    # Download stock data for the last 10 years
+    stock_data = download_stock_data(ticker="AAPL", start_date="2014-01-01", end_date="2024-01-01")
+    
+    response = client.post("/preprocess", json=stock_data)
     print(response.json())  # Print the error response for debugging
     assert response.status_code == 200
     assert "scaled_data" in response.json()
@@ -40,7 +39,10 @@ def test_evaluate_model(mocker):
     assert "Test Loss" in response.json()
 
 def test_predict():
-    response = client.post("/predict", json=sample_stock_data)
+    # Download stock data for the last 10 years
+    stock_data = download_stock_data(ticker="AAPL", start_date="2014-01-01", end_date="2024-01-01")
+    
+    response = client.post("/predict", json=stock_data)
     print(response.json())  # Print the error response for debugging
     assert response.status_code == 200
     assert "prediction" in response.json()
