@@ -56,10 +56,14 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    # Run the tests
+    # List files for debugging (optional)
+    - name: List files in notebooks directory
+      run: ls notebooks
+
+    # Run the tests (updated path to test_api.py)
     - name: Run tests
       run: |
-        pytest test_api.py
+        pytest ./notebooks/test_api.py
 
   # Job for building and deploying the Docker container (optional)
   deploy:
@@ -80,8 +84,9 @@ jobs:
     - name: Log in to DockerHub
       run: echo "Stock@Investigation2024.MLOps" | docker login -u "aleksandrarancic" --password-stdin
 
-    # Build the Docker image
+    # Build the Docker image and push to DockerHub
     - name: Build and push Docker image
       run: |
         docker build -t aleksandrarancic/stock-prediction-api:latest .
         docker push aleksandrarancic/stock-prediction-api:latest
+
