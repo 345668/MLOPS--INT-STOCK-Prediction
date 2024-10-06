@@ -35,7 +35,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    # Set up Python environment
+    # Set up Python environment (corrected Python version)
     - name: Set up Python 3.10
       uses: actions/setup-python@v4
       with:
@@ -85,4 +85,3 @@ jobs:
       run: |
         docker build -t aleksandrarancic/stock-prediction-api:latest .
         docker push aleksandrarancic/stock-prediction-api:latest
-
