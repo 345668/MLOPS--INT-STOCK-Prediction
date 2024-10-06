@@ -5,23 +5,32 @@ import pandas as pd
 
 client = TestClient(api)
 
-# URL for the dataset on GitHub
-GITHUB_CSV_URL = "https://github.com/DataScientest-Studio/AUG24-BMLOPS-INT-STOCK/blob/main/dataset/AAPL_data.csv"
+# Corrected URL to access the raw CSV file from GitHub
+GITHUB_CSV_URL = "https://raw.githubusercontent.com/DataScientest-Studio/AUG24-BMLOPS-INT-STOCK/main/dataset/AAPL_data.csv"
 
 # Function to download and preprocess stock data from GitHub
 def download_and_preprocess_data():
-    # Download the CSV file from GitHub
-    stock_data = pd.read_csv(GITHUB_CSV_URL)
+    try:
+        # Download the CSV file from the raw GitHub URL
+        stock_data = pd.read_csv(GITHUB_CSV_URL)
+        
+        # Convert the 'Date' column to string format if it exists
+        if 'Date' in stock_data.columns:
+            stock_data['Date'] = pd.to_datetime(stock_data['Date']).dt.strftime('%Y-%m-%d')
+        
+        # Convert the DataFrame to a dictionary in list format (to send as JSON payload)
+        return stock_data.to_dict(orient='records')
     
-    # Assuming the CSV has a 'Date' column that needs to be converted to string
-    stock_data['Date'] = pd.to_datetime(stock_data['Date']).dt.strftime('%Y-%m-%d')
-    
-    # Convert the DataFrame to a dictionary in list format (to send as JSON payload)
-    return stock_data.to_dict(orient='records')
+    except Exception as e:
+        print(f"Failed to download or preprocess data: {e}")
+        return []
 
 def test_evaluate_model():
     # Download and preprocess the stock data
     stock_data = download_and_preprocess_data()
+
+    # Ensure stock data is downloaded and preprocessed
+    assert stock_data, "Stock data should not be empty"
 
     # Send the preprocessed data to the /evaluate endpoint
     response = client.post("/evaluate", json=stock_data)
