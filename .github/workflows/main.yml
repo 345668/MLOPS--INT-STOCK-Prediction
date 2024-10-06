@@ -63,9 +63,14 @@ jobs:
       # Run the tests (updated path to test_api.py)
       - name: Run tests
         run: |
+          # Wait for the database service to be ready
+          until pg_isready -h localhost -U user; do
+            echo "Waiting for PostgreSQL to be ready..."
+            sleep 2
+          done
           pytest ./notebooks/test_api.py
 
-  # Job for building and deploying the Docker container (optional)
+  # Job for building and deploying the Docker container
   deploy:
     runs-on: ubuntu-latest
 
