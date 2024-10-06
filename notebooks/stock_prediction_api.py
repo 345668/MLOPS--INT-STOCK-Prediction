@@ -12,12 +12,12 @@ import json
 from datetime import datetime  
 
 # Load the model and scaler
-model = tf.keras.models.load_model("lstm_model.h5")
+model = model = tf.keras.models.load_model("models/lstm_model.h5")
 model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mae', 'mse', 'accuracy'])
-scaler = joblib.load("minmax_scaler.pkl")
+scaler = joblib.load("models/minmax_scaler.pkl")
 
 # Load model metrics
-with open("lstm_model_metrics.json", 'r') as f:
+with open("models/lstm_model_metrics.json", 'r') as f:
     metrics = json.load(f)
 
 # Initialize FastAPI
