@@ -1,4 +1,7 @@
 from fastapi import FastAPI, HTTPException
+from prometheus_client import Counter, Histogram, generate_latest
+from prometheus_client import REGISTRY
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 import pandas as pd
 import numpy as np
@@ -6,26 +9,34 @@ import tensorflow as tf
 import yfinance as yf
 import joblib
 import json
+from datetime import datetime  
 
 # Load the model and scaler
-model = tf.keras.models.load_model("/Users/aleksandra.rancic/Desktop/MLOps_Project/MLOps/ML_Model_API/venv/lstm_model.h5")
-
+model = tf.keras.models.load_model("lstm_model.h5")
 model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mae', 'mse', 'accuracy'])
+scaler = joblib.load("minmax_scaler.pkl")
 
-scaler = joblib.load('/Users/aleksandra.rancic/Desktop/MLOps_Project/MLOps/ML_Model_API/venv/minmax_scaler.pkl')
-
-with open('/Users/aleksandra.rancic/Desktop/MLOps_Project/MLOps/ML_Model_API/venv/lstm_model_metrics.json', 'r') as f:
+# Load model metrics
+with open("lstm_model_metrics.json", 'r') as f:
     metrics = json.load(f)
 
+# Initialize FastAPI
 api = FastAPI()
 
+# Prometheus metrics
+model_evaluation_counter = Counter('model_evaluations', 'Number of model evaluations')
+evaluation_duration = Histogram('evaluation_duration_seconds', 'Time taken to evaluate the model')
+
+# Pydantic model for stock data
 class StockData(BaseModel):
     open: float
     high: float
     low: float
     close: float
+    adjusted_close: float  
     volume: float
 
+# Function to log model performance
 def log_model_performance(evaluation, filename="model_performance_log.json"):
     try:
         with open(filename, 'r') as f:
@@ -43,25 +54,14 @@ def log_model_performance(evaluation, filename="model_performance_log.json"):
     with open(filename, 'w') as f:
         json.dump(logs, f, indent=4)
 
-@api.get("/evaluate")
-def evaluate_model():
-    # Load the test data (you need to replace this with actual test data)
-    X_test = np.load('X_test.npy')  # Placeholder, replace with real data
-    y_test = np.load('y_test.npy')  # Placeholder, replace with real data
-
-    # Evaluate the model
-    evaluation = model.evaluate(X_test, y_test, verbose=0)
-    
-    # Return the evaluation results as JSON
-    return {
-        "Test Loss": evaluation[0],
-        "Test MAE": evaluation[1],
-        "Test MSE": evaluation[2]
-    }
-
+# API endpoints
 @api.get("/")
 def root():
     return {"message": "Stock prediction API is running"}
+
+@api.get("/metrics", response_class=PlainTextResponse)
+def prometheus_metrics():
+    return generate_latest()
 
 @api.get("/download_stock_data")
 def download_stock_data(ticker: str):
@@ -72,10 +72,48 @@ def download_stock_data(ticker: str):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@api.post("/preprocess")
+def preprocess(stock_data: StockData):
+    try:
+        data = np.array([[stock_data.open, stock_data.high, stock_data.low, stock_data.close, stock_data.adjusted_close, stock_data.volume]])
+        scaled_data = scaler.transform(data)
+    
+        return {"scaled_data": scaled_data.tolist()}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+SUCCESS_CRITERIA = {
+    "mae_threshold": 10.0
+}
+
+@api.get("/evaluate")
+@evaluation_duration.time()
+def evaluate_model():
+    model_evaluation_counter.inc()  # Increment the counter for each evaluation
+    # Load test data (replace this with actual test data)
+    X_test = np.load('X_test.npy')  
+    y_test = np.load('y_test.npy')  
+
+    # Evaluate the model
+    evaluation = model.evaluate(X_test, y_test, verbose=0)
+    
+    if evaluation[1] > SUCCESS_CRITERIA["mae_threshold"]:
+        return {"message": "Model underperforms. Retraining needed!"}
+
+    # Log model performance
+    log_model_performance(evaluation)
+    
+    # Return evaluation results as JSON
+    return {
+        "Test Loss": evaluation[0],
+        "Test MAE": evaluation[1],
+        "Test MSE": evaluation[2]
+    }
+
 @api.post("/predict")
 def predict(stock_data: StockData):
     try: 
-        data = np.array([[stock_data.open, stock_data.high, stock_data.low, stock_data.close, stock_data.volume]])
+        data = np.array([[stock_data.open, stock_data.high, stock_data.low, stock_data.close, stock_data.adjusted_close, stock_data.volume]])  
         scaled_data = scaler.transform(data)
         lstm_input = scaled_data.reshape((1, 1, scaled_data.shape[1]))
         prediction = model.predict(lstm_input)
@@ -91,12 +129,12 @@ def get_metrics():
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@api.post("/preprocess")
-def preprocess(stock_data: StockData):
-    try:
-        data = np.array([[stock_data.open, stock_data.high, stock_data.low, stock_data.close, stock_data.volume]])
-        scaled_data = scaler.transform(data)
-    
-        return {"scaled_data": scaled_data.tolist()}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+@api.post("/retrain")
+def retrain_model():
+    X_train = np.load('X_train.npy')
+    y_train = np.load('y_train.npy')
+
+    model.fit(X_train, y_train, epochs=20, batch_size=32)
+    model.save('lstm_model.h5')
+
+    return {"message": "Model retrained successfully"}
