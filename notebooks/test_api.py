@@ -1,8 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
-from fastapi import FastAPI
+from stock_prediction_api import api  # Ensure you import your FastAPI app instance
 import numpy as np
-import json
 
 client = TestClient(api)
 
@@ -53,5 +52,4 @@ def test_retrain_model(mocker):
 def test_metrics():
     response = client.get("/metrics")
     assert response.status_code == 200
-    # Here, you can also validate the metrics content if you have expectations
-
+    # Validate the metrics content if you have expectations
