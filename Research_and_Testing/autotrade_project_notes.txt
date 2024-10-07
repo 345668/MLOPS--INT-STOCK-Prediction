@@ -1,0 +1,59 @@
+
+Project: Autotrade Bot with Machine Learning and Reinforcement Learning
+
+### Goals:
+1. Automate the stock/crypto trading process using AI/ML.
+2. Build a pipeline that integrates both traditional models (LightGBM/CatBoost) and deep learning models (LSTM).
+3. Incorporate reinforcement learning (Deep Q-Learning, PPO) for optimizing trading strategies.
+
+### Key Components:
+
+#### 1. Data Preprocessing & Feature Engineering:
+- Use historical and intraday market data.
+- Apply technical indicators like RSI, moving averages, Bollinger Bands, etc.
+- Create features using notebooks like:
+  - 04_preparing_the_model_data.ipynb
+  - 01_feature_engineering.ipynb
+  - 10_intraday_features.ipynb
+
+#### 2. Model Training:
+- **Gradient Boosting Models** (LightGBM/CatBoost) to generate baseline predictions.
+  - Use notebooks like 01_boosting_baseline.ipynb and 05_trading_signals_with_lightgbm_and_catboost.ipynb.
+- **LSTM** for sequential prediction of future stock prices or indicators.
+- **Reinforcement Learning** (DQL, PPO) for optimizing trade execution strategies.
+
+#### 3. Backtesting & Evaluation:
+- Backtest strategies using notebooks like 09_backtesting_with_zipline.ipynb.
+- Evaluate models with 06_evaluate_trading_signals.ipynb.
+
+#### 4. CI/CD Pipeline:
+- **MLflow** or **Kubeflow** for managing the model lifecycle (training, evaluation, deployment).
+- **GitHub Actions** for automating model retraining, testing, and deployment.
+- **Prometheus** for monitoring model performance in production and triggering retraining if necessary.
+
+#### 5. Model Serving & Deployment:
+- Deploy models using tools like **AWS SageMaker** or **Baseten** for continuous serving.
+- Set up APIs to serve models for real-time trading signals.
+- Containerize models using **Docker** for portability.
+
+### Action Plan:
+
+1. **Step 1: Specifications and API Development**
+   - Deadline: September 20th
+   - Define the project's context, and identify processes that can be automated using AI/ML.
+   - Develop the API for serving models and trading signals.
+   
+2. **Step 2: Isolation & CI/CD**
+   - Deadline: October 4th
+   - Set up containerized environments using Docker.
+   - Implement CI/CD workflows for continuous training, testing, and deployment.
+   - Automate model monitoring and retraining.
+
+### Tools/Frameworks:
+- **LightGBM**, **CatBoost** for baseline models.
+- **LSTM** for time-series forecasting.
+- **Reinforcement Learning (PPO, DQL)** for trade optimization.
+- **MLflow**, **Kubeflow** for model lifecycle management.
+- **GitHub Actions** for CI/CD.
+- **Prometheus** for monitoring.
+- **AWS SageMaker**, **Baseten** for model serving and deployment.
