@@ -1,12 +1,12 @@
-name: CI for Stock Prediction API
+name: CI/CD for Stock Prediction API
 
 on:
   push:
     branches:
-      - '**'  # This will trigger on any branch
+      - '**'
   pull_request:
     branches:
-      - '**'  # This will trigger on any branch
+      - '**'
 
 jobs:
   test:
@@ -32,3 +32,23 @@ jobs:
         source venv/bin/activate
         pytest --maxfail=1 --disable-warnings
 
+  build-and-push:
+    runs-on: ubuntu-latest
+    needs: test  # Ensure tests pass before building
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Build Docker image
+      run: |
+        docker build -t aleksandrarancic/stock-prediction-api:latest .
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: aleksandrarancic
+        password: Stock@Investigations2024.MLOps
+
+    - name: Push Docker image
+      run: |
+        docker push aleksandrarancic/stock-prediction-api:latest
