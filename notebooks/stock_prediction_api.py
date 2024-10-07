@@ -12,12 +12,12 @@ import json
 from datetime import datetime  
 
 # Load the model and scaler
-model = model = tf.keras.models.load_model("models/lstm_model.h5")
+model = tf.keras.models.load_model("lstm_model.h5")
 model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mae', 'mse', 'accuracy'])
-scaler = joblib.load("models/minmax_scaler.pkl")
+scaler = joblib.load("minmax_scaler.pkl")
 
 # Load model metrics
-with open("models/lstm_model_metrics.json", 'r') as f:
+with open("lstm_model_metrics.json", 'r') as f:
     metrics = json.load(f)
 
 # Initialize FastAPI
@@ -57,7 +57,7 @@ def log_model_performance(evaluation, filename="model_performance_log.json"):
 # API endpoints
 @api.get("/")
 def root():
-    return {"message": "Stock prediction API is running"}
+    return {"message": "Welcome to API for Stock predictions. The API is running!"}
 
 @api.get("/metrics", response_class=PlainTextResponse)
 def prometheus_metrics():
@@ -75,7 +75,7 @@ def download_stock_data(ticker: str):
 @api.post("/preprocess")
 def preprocess(stock_data: StockData):
     try:
-        data = np.array([[stock_data.open, stock_data.high, stock_data.low, stock_data.close, stock_data.adjusted_close, stock_data.volume]])
+        data = np.array([[stock_data.adjusted_close]])
         scaled_data = scaler.transform(data)
     
         return {"scaled_data": scaled_data.tolist()}
@@ -113,12 +113,14 @@ def evaluate_model():
 @api.post("/predict")
 def predict(stock_data: StockData):
     try: 
-        data = np.array([[stock_data.open, stock_data.high, stock_data.low, stock_data.close, stock_data.adjusted_close, stock_data.volume]])  
+        data = np.array([[stock_data.adjusted_close]])  
         scaled_data = scaler.transform(data)
         lstm_input = scaled_data.reshape((1, 1, scaled_data.shape[1]))
         prediction = model.predict(lstm_input)
+        predicted_value = scaler.inverse_transform(prediction.reshape(1, -1))
         
-        return {"prediction": prediction.tolist()}
+        return {"prediction": predicted_value.tolist()}
+
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
