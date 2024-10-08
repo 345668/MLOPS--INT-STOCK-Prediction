@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from prometheus_client import Counter, Histogram, generate_latest
 from prometheus_client import REGISTRY
 from fastapi.responses import PlainTextResponse
@@ -9,7 +9,8 @@ import tensorflow as tf
 import yfinance as yf
 import joblib
 import json
-from datetime import datetime  
+from datetime import datetime
+from typing import List
 
 # Load the model and scaler
 model = tf.keras.models.load_model("lstm_model.h5")
@@ -58,10 +59,6 @@ def log_model_performance(evaluation, filename="model_performance_log.json"):
 @api.get("/")
 def root():
     return {"message": "Welcome to API for Stock predictions. The API is running!"}
-
-@api.get("/metrics", response_class=PlainTextResponse)
-def prometheus_metrics():
-    return generate_latest()
 
 @api.get("/download_stock_data")
 def download_stock_data(ticker: str):
@@ -124,6 +121,23 @@ def predict(stock_data: StockData):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@api.post("/ulpoad_and_predict")
+async def upload_and_predict(file: UploadFile = File(...)):
+	try:
+		df = pd.read_csv(file.file)
+		if 'Adj Close' not in df.columns:
+			raise HTTPException(status_code = 400, detail = "The dataset must contain an 'Adj Close' column.")
+		data = df[['Adj Close']].values
+		scaled_data = scaler.transform(data)
+		lstm_input = scaled_data.reshape((scaled_data.shape[0], 1, scaled_data.shape[1]))
+		predictions = model.predict(lstm_input)
+		predicted_values = scaler.inverse_transform(predictions.reshape(-1, 1))
+
+		return {"predictions": predicted_values.flatten().tolist()}
+	except Exception as e:
+		raise HTTPException(status_code = 400, detail = str(e))
+
+
 @api.get("/metrics")
 def get_metrics():
     try:
@@ -140,3 +154,7 @@ def retrain_model():
     model.save('lstm_model.h5')
 
     return {"message": "Model retrained successfully"}
+
+@api.get("/metrics", response_class=PlainTextResponse)
+def prometheus_metrics():
+    return generate_latest()
