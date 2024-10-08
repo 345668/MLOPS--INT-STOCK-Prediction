@@ -11,7 +11,7 @@ gast==0.6.0
 google-pasta==0.2.0
 grpcio==1.66.1
 h5py==3.12.1
-httpx==0.24.1  # Missing dependency for FastAPI testing
+httpx>=0.25.0  # Updated to resolve JupyterLab conflict
 idna==3.10
 itsdangerous==2.2.0
 Jinja2==3.1.4
@@ -52,6 +52,5 @@ fastapi==0.100.0  # FastAPI framework for the API
 openpyxl==3.1.2  # Excel reading support if needed
 pytest==7.4.0  # Add pytest for testing
 pytest-mock==3.10.0
-streamlit
-
+python-multipart==0.0.6
 
